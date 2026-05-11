@@ -1,0 +1,2 @@
+id:INT,nombre:STRING,grado:INT
+1,Juan,5

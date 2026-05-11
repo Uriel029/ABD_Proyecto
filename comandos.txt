@@ -1,0 +1,46 @@
+=== EJEMPLOS DE COMANDOS - MOTOR DE BASE DE DATOS ===
+
+1. CREAR BASE DE DATOS y TABLA:
+   CREAR BASE tienda
+   USAR tienda
+   CREAR TABLA productos (id INT nombre STRING precio FLOAT cantidad INT)
+   DESCRIBIR productos
+
+2. INSERTAR registros:
+   INSERTAR EN productos VALORES (1 Laptop 15000.50 5)
+   INSERTAR EN productos VALORES (2 Mouse 250.99 10)
+
+3. CONSULTAR (SELECT):
+   SELECCIONAR * DE productos
+   SELECCIONAR * DE productos DONDE id=1
+
+4. ACTUALIZAR:
+   ACTUALIZAR productos SET precio=14500 DONDE id=1
+
+5. ELIMINAR:
+   ELIMINAR DE productos DONDE id=2
+
+6. TRANSACCION con CANCELACION:
+   INICIAR
+   INSERTAR EN productos VALORES (4 Monitor 3500 2)
+   CANCELAR
+
+7. TRANSACCION con CONFIRMACION:
+   INICIAR
+   INSERTAR EN productos VALORES (4 Monitor 3500 2)
+   CONFIRMAR
+
+8. RESPALDO con fork():
+   RESPALDAR
+
+9. MULTIPLES BASES DE DATOS:
+   CREAR BASE escuela
+   USAR escuela
+   CREAR TABLA alumnos (id INT nombre STRING grado INT)
+   INSERTAR EN alumnos VALORES (1 Juan 5)
+   INSERTAR EN alumnos VALORES (2 Maria 6)
+   MOSTRAR TABLAS
+   MOSTRAR BASES
+
+10. SALIR:
+    SALIR
