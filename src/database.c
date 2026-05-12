@@ -1,5 +1,6 @@
 #include "database.h"
 #include <ctype.h>
+#include <sys/stat.h>
 
 static int type_from_string(const char *s) {
     char up[MAX_NAME]; strncpy(up, s, MAX_NAME - 1);
@@ -33,8 +34,15 @@ int engine_load(Engine *eng) {
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL && eng->numDatabases < MAX_DATABASES) {
         if (entry->d_name[0] == '.') continue;
-        if (entry->d_type != DT_DIR) continue;
         if (strcmp(entry->d_name, "_trans_tmp") == 0) continue;
+        int es_dir = (entry->d_type == DT_DIR);
+        if (entry->d_type == DT_UNKNOWN) {
+            struct stat st;
+            char p[MAX_LINE];
+            snprintf(p, MAX_LINE, "%s/%s", eng->dataDir, entry->d_name);
+            es_dir = (stat(p, &st) == 0 && S_ISDIR(st.st_mode));
+        }
+        if (!es_dir) continue;
 
         Database *db = &eng->databases[eng->numDatabases];
         strncpy(db->name, entry->d_name, MAX_NAME - 1);

@@ -1,0 +1,13 @@
+# Binarios y objetos
+db_engine
+*.o
+
+# Datos del motor (persistencia)
+data/*
+!data/.gitkeep
+
+# Entorno virtual
+web/venv/
+
+# macOS
+.DS_Store
