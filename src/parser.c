@@ -3,10 +3,20 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+/*
+ * mayusculas: Convierte un string a mayusculas (in-place).
+ * Se usa para comparar comandos sin importar como los escribio el usuario.
+ */
 static void mayusculas(char *s) {
     for (int i = 0; s[i]; i++) s[i] = toupper((unsigned char)s[i]);
 }
 
+/*
+ * extraer_tokens: Divide una linea en tokens (palabras).
+ * - Respeta comillas dobles para valores con espacios.
+ * - Ej: INSERTAR EN t VALORES ("Hola Mundo" 123)
+ *       → tokens: ["INSERTAR", "EN", "t", "VALORES", "Hola Mundo", "123"]
+ */
 static int extraer_tokens(const char *in, char tok[][MAX_NAME], int max) {
     int n = 0;
     const char *p = in;
@@ -29,6 +39,10 @@ static int extraer_tokens(const char *in, char tok[][MAX_NAME], int max) {
     return n;
 }
 
+/*
+ * entre_parentesis: Extrae el contenido entre parentesis de un string.
+ * Ej: "INSERTAR EN t VALORES (1 Juan 25)" → "1 Juan 25"
+ */
 static char* entre_parentesis(const char *in, char *buf, int size) {
     const char *a = strchr(in, '(');
     const char *c = strchr(in, ')');
@@ -41,6 +55,25 @@ static char* entre_parentesis(const char *in, char *buf, int size) {
     return buf;
 }
 
+/*
+ * parse_command: Interpreta un comando escrito por el usuario.
+ *
+ * Reconoce estos patrones (todo case-insensitive):
+ *
+ *   SALIR / SALIR BASE / SALIR BD
+ *   AYUDA / INICIAR / CONFIRMAR / CANCELAR / RESPALDAR
+ *   CREAR BASE <nombre>
+ *   CREAR TABLA <nombre> (<col> <TIPO> [<col> <TIPO>...])
+ *   USAR <nombre>
+ *   MOSTRAR BASES / MOSTRAR TABLAS
+ *   DESCRIBIR <tabla>
+ *   INSERTAR EN <tabla> VALORES (<v1> <v2> ...)
+ *   SELECCIONAR * DE <tabla> [DONDE <col>=<val>]
+ *   ACTUALIZAR <tabla> SET <col>=<val> DONDE <col>=<val>
+ *   ELIMINAR DE <tabla> DONDE <col>=<val>
+ *   ELIMINAR TABLA <nombre>
+ *   ELIMINAR BASE <nombre>
+ */
 int parse_command(const char *input, ParsedCmd *cmd) {
     memset(cmd, 0, sizeof(ParsedCmd));
 
@@ -50,6 +83,7 @@ int parse_command(const char *input, ParsedCmd *cmd) {
 
     mayusculas(tokens[0]);
 
+    /* ===== COMANDOS DE UNA SOLA PALABRA ===== */
     if (strcmp(tokens[0], "SALIR") == 0) {
         if (nt >= 2) {
             mayusculas(tokens[1]);
@@ -76,6 +110,7 @@ int parse_command(const char *input, ParsedCmd *cmd) {
         strcpy(cmd->command, "RESPALDAR"); return 0;
     }
 
+    /* ===== CREAR BASE / CREAR TABLA ===== */
     if (strcmp(tokens[0], "CREAR") == 0 && nt >= 3) {
         mayusculas(tokens[1]);
         if (strcmp(tokens[1], "BASE") == 0) {
@@ -87,6 +122,7 @@ int parse_command(const char *input, ParsedCmd *cmd) {
             strcpy(cmd->command, "CREAR_TABLA");
             strncpy(cmd->tableName, tokens[2], MAX_NAME - 1);
 
+            /* Extraer columnas de los parentesis */
             char paren[MAX_LINE];
             entre_parentesis(input, paren, MAX_LINE);
             if (strlen(paren) == 0) return -1;
@@ -96,11 +132,13 @@ int parse_command(const char *input, ParsedCmd *cmd) {
             while (*p && cmd->numColumns < MAX_COLUMNS) {
                 while (*p == ' ') p++;
                 if (!*p) break;
+                /* Nombre de columna */
                 char cname[MAX_NAME]; int ci = 0;
                 while (*p && *p != ' ' && *p != ',') cname[ci++] = *p++;
                 cname[ci] = '\0';
                 if (ci == 0) break;
 
+                /* Tipo de columna */
                 while (*p == ' ') p++;
                 char ctype[MAX_NAME]; ci = 0;
                 while (*p && *p != ' ' && *p != ',') ctype[ci++] = *p++;
@@ -124,12 +162,14 @@ int parse_command(const char *input, ParsedCmd *cmd) {
         return -1;
     }
 
+    /* ===== USAR ===== */
     if (strcmp(tokens[0], "USAR") == 0 && nt >= 2) {
         strcpy(cmd->command, "USAR");
         strncpy(cmd->dbName, tokens[1], MAX_NAME - 1);
         return 0;
     }
 
+    /* ===== MOSTRAR BASES / MOSTRAR TABLAS ===== */
     if (strcmp(tokens[0], "MOSTRAR") == 0 && nt >= 2) {
         mayusculas(tokens[1]);
         if (strcmp(tokens[1], "BASES") == 0) {
@@ -141,12 +181,14 @@ int parse_command(const char *input, ParsedCmd *cmd) {
         return -1;
     }
 
+    /* ===== DESCRIBIR ===== */
     if (strcmp(tokens[0], "DESCRIBIR") == 0 && nt >= 2) {
         strcpy(cmd->command, "DESCRIBIR");
         strncpy(cmd->tableName, tokens[1], MAX_NAME - 1);
         return 0;
     }
 
+    /* ===== INSERTAR EN ... VALORES (...) ===== */
     if (strcmp(tokens[0], "INSERTAR") == 0 && nt >= 4) {
         mayusculas(tokens[1]);
         if (strcmp(tokens[1], "EN") != 0) return -1;
@@ -156,6 +198,7 @@ int parse_command(const char *input, ParsedCmd *cmd) {
         mayusculas(tokens[3]);
         if (strcmp(tokens[3], "VALORES") != 0) return -1;
 
+        /* Extraer valores de los parentesis */
         char paren[MAX_LINE];
         entre_parentesis(input, paren, MAX_LINE);
 
@@ -181,6 +224,7 @@ int parse_command(const char *input, ParsedCmd *cmd) {
         return cmd->numValues > 0 ? 0 : -1;
     }
 
+    /* ===== SELECCIONAR * DE ... [DONDE col=val] ===== */
     if (strcmp(tokens[0], "SELECCIONAR") == 0 && nt >= 4) {
         if (strcmp(tokens[1], "*") != 0) return -1;
         mayusculas(tokens[2]);
@@ -204,6 +248,7 @@ int parse_command(const char *input, ParsedCmd *cmd) {
         return 0;
     }
 
+    /* ===== ACTUALIZAR ... SET ... DONDE ... ===== */
     if (strcmp(tokens[0], "ACTUALIZAR") == 0 && nt >= 6) {
         strcpy(cmd->command, "ACTUALIZAR");
         strncpy(cmd->tableName, tokens[1], MAX_NAME - 1);
@@ -233,6 +278,7 @@ int parse_command(const char *input, ParsedCmd *cmd) {
         return 0;
     }
 
+    /* ===== ELIMINAR DE / ELIMINAR TABLA / ELIMINAR BASE ===== */
     if (strcmp(tokens[0], "ELIMINAR") == 0 && nt >= 3) {
         mayusculas(tokens[1]);
 

@@ -6,13 +6,52 @@
 #include "database.h"
 #include "parser.h"
 
+/*
+ * main.c: Punto de entrada del motor de base de datos.
+ *
+ * Funcionamiento:
+ * 1. Configura el manejador de SIGINT (Ctrl+C)
+ * 2. Inicializa y carga datos desde disco
+ * 3. Muestra el banner de bienvenida
+ * 4. Entra en un bucle REPL (Read-Eval-Print-Loop)
+ *    - Muestra el prompt segun el contexto
+ *    - Lee una linea del usuario
+ *    - Parsea el comando con parse_command()
+ *    - Ejecuta la funcion del motor correspondiente
+ * 5. En SALIR o EOF (pipe), guarda datos y termina
+ */
+
+/* ==================================================================
+ * VARIABLES GLOBALES
+ * ================================================================== */
+
+/* Flag para Ctrl+C: volatile porque se modifica desde el manejador
+ * de senales, sig_atomic_t porque es seguro para usar en senales */
 static volatile sig_atomic_t interrumpido = 0;
+
+/* El motor es global para que el manejador de SIGINT y
+ * cleanup_and_exit() puedan acceder a el */
 static Engine engine;
 
+/* ==================================================================
+ * MANEJADOR DE SENALES
+ * ================================================================== */
+
+/*
+ * sigint_handler: Se ejecuta cuando el usuario presiona Ctrl+C (SIGINT).
+ *
+ * Solo establece el flag interrumpido = 1.
+ * El ciclo principal detecta el flag y ejecuta el cierre seguro.
+ * Esto es importante porque muchas funciones no son "signal-safe".
+ */
 static void sigint_handler(int sig) {
     (void)sig;
     interrumpido = 1;
 }
+
+/* ==================================================================
+ * AYUDA
+ * ================================================================== */
 
 static void mostrar_ayuda(void) {
     printf("\n============================================\n");
@@ -42,6 +81,24 @@ static void mostrar_ayuda(void) {
     printf("============================================\n\n");
 }
 
+/* ==================================================================
+ * CIERRE SEGURO
+ * ================================================================== */
+
+/*
+ * cleanup_and_exit: Guarda todo y termina el programa.
+ *
+ * Se llama desde:
+ * - Comando SALIR
+ * - Ctrl+C (SIGINT)
+ * - EOF en pipe (redireccion de entrada)
+ *
+ * Pasos:
+ * 1. Si hay transaccion activa, la cancela
+ * 2. Guarda todas las tablas a disco
+ * 3. Registra en el log
+ * 4. Mensaje de despedida
+ */
 static void cleanup_and_exit(void) {
     if (engine.inTransaction) {
         printf("Cancelando transaccion activa...\n");
@@ -52,6 +109,21 @@ static void cleanup_and_exit(void) {
     printf("Datos guardados. Hasta luego!\n");
 }
 
+/* ==================================================================
+ * LECTURA DE ENTRADA
+ * ================================================================== */
+
+/*
+ * leer_linea: Lee una linea completa desde stdin.
+ *
+ * - Lee caracter por caracter con fgetc()
+ * - Termina en '\n' (salto de linea)
+ * - Retorna -1 en EOF (sin datos)
+ * - Retorna la cantidad de caracteres leidos (exito)
+ *
+ * Nota: El prompt se escribe con printf() antes de llamar a esta
+ * funcion, y se hace fflush(stdout) para asegurar que se vea.
+ */
 static int leer_linea(char *buf, int size) {
     int i = 0;
     int c;
@@ -65,12 +137,19 @@ static int leer_linea(char *buf, int size) {
     return i;
 }
 
+/* ==================================================================
+ * PROGRAMA PRINCIPAL
+ * ================================================================== */
+
 int main(void) {
+    /* Configurar manejador de Ctrl+C */
     signal(SIGINT, sigint_handler);
 
+    /* Inicializar motor y cargar datos existentes */
     engine_init(&engine, "data");
     engine_load(&engine);
 
+    /* Banner de bienvenida */
     printf("============================================\n");
     printf("       MI PROPIO MOTOR DE BASE DE DATOS\n");
     printf("============================================\n");
@@ -80,7 +159,9 @@ int main(void) {
 
     char input[MAX_LINE];
 
+    /* REPL: Read-Eval-Print Loop */
     while (1) {
+        /* Verificar si el usuario presiono Ctrl+C */
         if (interrumpido) {
             printf("\nInterrupcion (Ctrl+C) detectada.\n");
             if (engine.inTransaction) {
@@ -91,6 +172,10 @@ int main(void) {
             break;
         }
 
+        /* Mostrar prompt:
+         * - "> " cuando no hay BD seleccionada
+         * - "tienda> " cuando hay BD seleccionada
+         * - "T> tienda> " cuando hay transaccion activa */
         if (engine.currentDB) {
             printf("%s", engine.inTransaction ? "T> " : "");
             printf("%s> ", engine.currentDB->name);
@@ -99,23 +184,28 @@ int main(void) {
         }
         fflush(stdout);
 
+        /* Leer comando del usuario */
         if (leer_linea(input, MAX_LINE) < 0) {
             if (interrumpido) continue;
             if (isatty(STDIN_FILENO)) {
+                /* Ctrl+D en terminal interactiva: ignorar y seguir */
                 printf("\n");
                 continue;
             }
+            /* EOF en pipe (entrada redirigida): salir */
             cleanup_and_exit();
             break;
         }
         if (strlen(input) == 0) continue;
 
+        /* Parsear el comando */
         ParsedCmd cmd;
         if (parse_command(input, &cmd) != 0) {
             printf("Comando invalido. Escribe AYUDA.\n");
             continue;
         }
 
+        /* Ejecutar segun el comando parseado */
         if (strcmp(cmd.command, "SALIR") == 0) {
             cleanup_and_exit();
             break;
