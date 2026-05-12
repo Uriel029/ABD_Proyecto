@@ -1,6 +1,7 @@
 #include "database.h"
 #include <ctype.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
 static int type_from_string(const char *s) {
     char up[MAX_NAME]; strncpy(up, s, MAX_NAME - 1);

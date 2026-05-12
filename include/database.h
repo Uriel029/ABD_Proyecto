@@ -1,6 +1,8 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
+#define _DEFAULT_SOURCE 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
