@@ -1,0 +1,9 @@
+data/
+web/venv/
+.git/
+.DS_Store
+*.o
+db_engine
+README.md
+comandos.txt
+interfaz.py
