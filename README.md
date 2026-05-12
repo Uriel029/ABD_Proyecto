@@ -1,21 +1,38 @@
-# Proyecto: Motor Propio de Base de Datos en C
+# Motor de Base de Datos en C
 
-## Descripcion
+Motor de base de datos **propio** implementado desde cero en C. Sin MySQL, PostgreSQL,
+MongoDB ni SQLite. Almacenamiento en archivos de texto plano con interprete de
+comandos en espanol, interfaz de terminal web y GUI de escritorio.
 
-Este proyecto implementa un motor de base de datos **propio** desde cero en lenguaje C.
-No utiliza MySQL, PostgreSQL, MongoDB ni SQLite. Los datos se almacenan en archivos
-de texto plano y se gestionan a traves de un interprete de comandos en espanol.
+**Live demo:** [abd-proyecto.onrender.com](https://abd-proyecto.onrender.com)
 
-### Caracteristicas principales
-- Multiples bases de datos
-- Multiples tablas por base de datos
-- Tipos de datos: INT, FLOAT, STRING
-- CRUD completo (Crear, Leer, Actualizar, Eliminar)
-- Transacciones con propiedades ACID
-- Manejo de interrupciones (Ctrl+C)
-- Procesos con fork() para respaldos
-- Archivo de log de operaciones
-- Interprete de comandos en espanol
+---
+
+## Interfaces
+
+### Terminal Web (Flask)
+Navegador web tipo PostgreSQL. Corre en Render con Docker.
+
+```bash
+cd web
+pip install flask gunicorn
+python app.py
+# Abrir http://localhost:5000
+```
+
+### GUI de Escritorio (tkinter)
+Interfaz grafica local con Python.
+
+```bash
+python3 interfaz.py
+```
+
+### Terminal C (CLI)
+Consola original del motor.
+
+```bash
+./db_engine
+```
 
 ---
 
@@ -30,11 +47,18 @@ ABD_Proyecto/
 ├── include/
 │   ├── database.h      # Estructuras y prototipos
 │   └── parser.h        # Prototipo del interprete
+├── web/
+│   ├── app.py          # Backend Flask
+│   ├── requirements.txt
+│   └── templates/
+│       └── index.html  # Terminal PostgreSQL en HTML+JS
 ├── data/
 │   ├── log.txt         # Registro de operaciones
-│   ├── <basedatos>/    # Directorio por base de datos
+│   ├── <basedatos>/
 │   │   └── <tabla>.dat # Archivo por tabla
 │   └── backup/         # Respaldo generado con fork()
+├── interfaz.py         # GUI de escritorio (tkinter)
+├── Dockerfile          # Build para deploy en Render
 ├── Makefile
 └── README.md
 ```
@@ -44,27 +68,16 @@ ABD_Proyecto/
 ## Compilacion
 
 ```bash
-cd ABD_Proyecto
 make clean all
 ```
 
-Para compilar manualmente sin Make:
+o manual:
+
 ```bash
 gcc -Wall -Wextra -Iinclude -std=c11 src/*.c -o db_engine
 ```
 
----
-
-## Ejecucion
-
-```bash
-./db_engine
-```
-
-El prompt cambia segun el contexto:
-- `>` - Sin base de datos seleccionada
-- `tienda>` - Base 'tienda' seleccionada
-- `T> tienda>` - En transaccion sobre 'tienda'
+El `Dockerfile` compila automaticamente en Linux para deploy web.
 
 ---
 
@@ -109,6 +122,7 @@ El prompt cambia segun el contexto:
 |---------|-------------|
 | `RESPALDAR` | Crea respaldo usando fork() |
 | `AYUDA` | Muestra ayuda de comandos |
+| `LIMPIAR` | Limpia la pantalla (solo GUI/Web) |
 | `SALIR` | Sale guardando datos |
 
 ---
@@ -164,6 +178,80 @@ escuela> SALIR
 
 ---
 
+## Arquitectura
+
+### Motor C (core)
+- **Engine** → **Database[]** → **Table[]** (Columnas + Filas)
+- Datos en memoria durante la ejecucion
+- Persistencia en archivos `.dat` (CSV con cabecera de tipos)
+- Directorio `data/` con una carpeta por base de datos
+- Archivo `log.txt` con registro cronologico
+
+### Interfaz Web (Flask + subprocess)
+- Cada comando HTTP ejecuta `db_engine` como subproceso
+- La sesion (base de datos actual) se rastrea via cookies de Flask
+- `USAR <bd>` se antepone automaticamente a comandos que lo requieren
+- Precarga de datos de ejemplo durante el build de Docker
+
+### GUI de Escritorio (tkinter)
+- Misma logica que la web: subprocess + rastreo de sesion en Python
+- Prompt estilo PostgreSQL: `=#` o `basedatos=#`
+
+---
+
+## Propiedades ACID
+
+### Atomicidad
+Las transacciones usan un directorio temporal `data/_trans_tmp/` que guarda
+el estado de todas las tablas al iniciar la transaccion. Al hacer `CANCELAR`,
+se restauran los archivos originales. Al hacer `CONFIRMAR`, se elimina el
+directorio temporal.
+
+### Consistencia
+- Validacion de tipos (INT, FLOAT, STRING)
+- Verificacion de existencia de tablas y columnas
+- Verificacion de numero correcto de valores al insertar
+- No se permiten operaciones sin seleccionar una base de datos
+
+### Aislamiento
+Sistema monousuario. Cada operacion se ejecuta de principio a fin sin
+interrupcion. Durante una transaccion, los cambios solo existen en memoria
+hasta que se confirman.
+
+### Durabilidad
+- `CONFIRMAR` escribe inmediatamente a los archivos `.dat`
+- `SALIR` guarda todos los datos antes de terminar
+- Ctrl+C dispara el guardado automatico
+- `log.txt` provee un registro permanente
+
+---
+
+## Despliegue en Render
+
+1. Subir el proyecto a GitHub
+2. En [render.com](https://render.com): **New+** → **Web Service**
+3. Conectar repo, elegir **Docker** como runtime
+4. Render detecta el `Dockerfile`, compila el motor C, instala Flask y sirve
+5. Obtener URL tipo `https://abd-proyecto.onrender.com`
+
+**Nota:** El plan gratis tiene almacenamiento efimero. Los datos creados en
+sesion se pierden al reiniciar. El `Dockerfile` precarga una base `ejemplo`
+con datos que persisten en la imagen.
+
+---
+
+## Compatibilidad Linux
+
+El proyecto se compila y ejecuta en Linux. Particularidades:
+
+- `d_type` no es confiable en todos los sistemas de archivos Linux
+  (ext4, XFS). Se usa `stat()` como fallback via `S_ISDIR()`.
+- Se define `_DEFAULT_SOURCE` para exponer POSIX con `-std=c11`.
+- Se incluye `sys/wait.h` para `fork()` + `wait()`.
+- El `Dockerfile` usa `python:3.11-slim` (Debian) como base.
+
+---
+
 ## Archivos de Almacenamiento
 
 Formato de los archivos `.dat`:
@@ -186,56 +274,6 @@ Archivos generados:
 
 ---
 
-## Propiedades ACID
-
-### Atomicidad
-Las transacciones usan un directorio temporal `data/_trans_tmp/` que guarda
-el estado de todas las tablas al iniciar la transaccion. Al hacer `CANCELAR`,
-se restauran los archivos originales. Al hacer `CONFIRMAR`, se elimina el
-directorio temporal. Si el programa se interrumpe durante una transaccion,
-se cancela automaticamente.
-
-### Consistencia
-- Validacion de tipos (INT, FLOAT, STRING)
-- Verificacion de existencia de tablas antes de operar
-- Verificacion de numero correcto de valores al insertar
-- No se permiten operaciones sin seleccionar una base de datos
-
-### Aislamiento
-El sistema es monousuario. Cada operacion se ejecuta de principio a fin
-sin interrupcion. Durante una transaccion, los cambios solo existen en
-memoria hasta que se confirman.
-
-### Durabilidad
-- `CONFIRMAR` escribe inmediatamente a los archivos `.dat`
-- `SALIR` guarda todos los datos antes de terminar
-- Ctrl+C dispara el guardado automatico
-- El archivo `log.txt` provee un registro permanente
-
----
-
-## Manejo de Interrupciones (Senales)
-
-El programa captura `SIGINT` (Ctrl+C) usando `signal()`:
-
-1. El manejador establece un flag `volatile sig_atomic_t`
-2. El ciclo principal detecta el flag y ejecuta el cierre seguro
-3. Si hay transaccion activa, se cancela automaticamente
-4. Se guardan todos los datos
-5. Se registra en el log y termina
-
----
-
-## Manejo de Procesos (fork)
-
-El comando `RESPALDAR` demuestra el uso de `fork()`:
-
-1. **Proceso hijo**: usa `system()` para copiar el directorio `data/` a `data/backup/`
-2. **Proceso padre**: espera al hijo con `wait()` y verifica el resultado
-3. Demuestra creacion de procesos, ejecucion paralela y sincronizacion
-
----
-
 ## Evidencias Sugeridas
 
 1. Compilacion: `make clean all` sin errores ni warnings
@@ -248,33 +286,21 @@ El comando `RESPALDAR` demuestra el uso de `fork()`:
 8. Ctrl+C: Captura de pantalla mostrando cierre seguro
 9. Log: `cat data/log.txt` mostrando el registro historico
 10. Archivos: `ls -laR data/` mostrando la estructura
+11. Web: Captura del navegador en `https://abd-proyecto.onrender.com`
+12. GUI: Captura de la ventana de `python3 interfaz.py`
 
 ---
 
-## Entrega del Proyecto
+## Tecnologias
 
-### Opcion recomendada: GitHub
-
-```bash
-git init
-git add .
-git commit -m "Motor propio de base de datos en C"
-git remote add origin https://github.com/TU_USUARIO/ABD_Proyecto.git
-git push -u origin main
-```
-
-### Alternativas
-- **GitHub Codespaces**: Entorno Linux en el navegador
-- **Replit**: Crear repl de C y subir archivos
-- **Maquina Virtual**: VirtualBox + Ubuntu + `sudo apt install gcc make`
-- **USB/ZIP**: Comprimir y entregar
-
-### En la PC del profesor
-
-```bash
-# Con Make
-make clean all && ./db_engine
-
-# Sin Make
-gcc -Wall -Wextra -Iinclude -std=c11 src/*.c -o db_engine && ./db_engine
-```
+| Componente | Lenguaje/Tecnologia |
+|------------|-------------------|
+| Motor de BD | C11 (gcc) |
+| Interprete de comandos | C11 (strtok, manual) |
+| GUI de escritorio | Python 3 + tkinter |
+| Backend web | Python 3 + Flask + gunicorn |
+| Frontend web | HTML5 + CSS3 + JavaScript (fetch) |
+| Despliegue | Docker + Render |
+| Almacenamiento | Archivos `.dat` (CSV) |
+| Respaldo | fork() + system() + wait() |
+| Senales | signal() + sig_atomic_t |
