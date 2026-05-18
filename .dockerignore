@@ -1,9 +1,25 @@
+# No copiar datos locales (se generan en build)
 data/
-web/venv/
+
+# No copiar git
 .git/
-.DS_Store
-*.o
+.gitignore
+
+# No copiar entornos locales
+web/venv/
+__pycache__/
+*.pyc
+
+# No copiar binarios locales (se compilan en build)
 db_engine
+*.o
+
+# No copiar scripts y docs para la imagen de produccion
+scripts/
+docs/
+
+# macOS
+.DS_Store
+
+# No copiar documentacion de desarrollo
 README.md
-comandos.txt
-interfaz.py

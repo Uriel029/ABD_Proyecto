@@ -8,59 +8,38 @@ comandos en espanol, interfaz de terminal web y GUI de escritorio.
 
 ---
 
-## Interfaces
-
-### Terminal Web (Flask)
-Navegador web tipo PostgreSQL. Corre en Render con Docker.
-
-```bash
-cd web
-pip install flask gunicorn
-python app.py
-# Abrir http://localhost:5000
-```
-
-### GUI de Escritorio (tkinter)
-Interfaz grafica local con Python.
-
-```bash
-python3 interfaz.py
-```
-
-### Terminal C (CLI)
-Consola original del motor.
-
-```bash
-./db_engine
-```
-
----
-
 ## Estructura del Proyecto
 
 ```
-ABD_Proyecto/
+ABD_PROYECTO/
 ├── src/
 │   ├── main.c          # REPL, manejo de senales (SIGINT)
 │   ├── database.c      # Motor de BD completo
 │   └── parser.c        # Interprete de comandos en espanol
 ├── include/
-│   ├── database.h      # Estructuras y prototipos
+│   ├── database.h      # Estructuras y prototipos del motor
 │   └── parser.h        # Prototipo del interprete
 ├── web/
-│   ├── app.py          # Backend Flask
+│   ├── app.py          # Backend Flask (terminal web)
+│   ├── interfaz.py     # GUI de escritorio (tkinter)
 │   ├── requirements.txt
 │   └── templates/
 │       └── index.html  # Terminal PostgreSQL en HTML+JS
+├── scripts/
+│   ├── demo.sh         # Demo automatizada de todas las funciones
+│   └── comandos.txt    # Guia rapida de comandos
 ├── data/
-│   ├── log.txt         # Registro de operaciones
-│   ├── <basedatos>/
-│   │   └── <tabla>.dat # Archivo por tabla
-│   └── backup/         # Respaldo generado con fork()
-├── interfaz.py         # GUI de escritorio (tkinter)
+│   ├── EJEMPLO/
+│   │   └── PRODUCTOS.dat  # Datos precargados de ejemplo
+│   └── log.txt         # Registro de operaciones
+├── docs/
+│   └── capturas/       # Capturas para evidencias
 ├── Dockerfile          # Build para deploy en Render
 ├── Makefile
-└── README.md
+├── README.md
+├── .gitignore
+├── .dockerignore
+└── db_engine           # Ejecutable compilado
 ```
 
 ---
@@ -78,6 +57,47 @@ gcc -Wall -Wextra -Iinclude -std=c11 src/*.c -o db_engine
 ```
 
 El `Dockerfile` compila automaticamente en Linux para deploy web.
+
+---
+
+## Como Ejecutar
+
+### Terminal C (CLI)
+```bash
+./db_engine
+```
+
+### Terminal Web (Flask)
+```bash
+cd web
+pip install -r requirements.txt
+python app.py
+# Abrir http://localhost:5000
+```
+
+### GUI de Escritorio (tkinter)
+```bash
+cd web
+python3 interfaz.py
+```
+
+### Demo Automatizada
+```bash
+bash scripts/demo.sh
+```
+
+---
+
+## Interfaces
+
+### Terminal C (CLI)
+Consola original del motor. Comandos en espanol directamente en la terminal.
+
+### Terminal Web (Flask)
+Navegador web tipo PostgreSQL. Corre en Render con Docker o localmente.
+
+### GUI de Escritorio (tkinter)
+Interfaz grafica local con Python y tkinter, mismo estilo que la web.
 
 ---
 
@@ -139,7 +159,7 @@ tienda> INSERTAR EN productos VALORES (3 Teclado 800 3)
 tienda> SELECCIONAR * DE productos
 
 +--------------+--------------+--------------+--------------+
-| id          | nombre      | precio      | cantidad    |
+| ID          | NOMBRE      | PRECIO      | CANTIDAD    |
 +--------------+--------------+--------------+--------------+
 | 1           | Laptop      | 15000.50    | 5           |
 | 2           | Mouse       | 250.99      | 10          |
@@ -261,9 +281,9 @@ columna1:TIPO,columna2:TIPO,...
 valor1,valor2,valor3,...
 ```
 
-Ejemplo `data/tienda/productos.dat`:
+Ejemplo `data/EJEMPLO/PRODUCTOS.dat`:
 ```
-id:INT,nombre:STRING,precio:FLOAT,cantidad:INT
+ID:INT,NOMBRE:STRING,PRECIO:FLOAT,CANTIDAD:INT
 1,Laptop,15000.50,5
 2,Mouse,250.99,10
 ```
@@ -287,7 +307,7 @@ Archivos generados:
 9. Log: `cat data/log.txt` mostrando el registro historico
 10. Archivos: `ls -laR data/` mostrando la estructura
 11. Web: Captura del navegador en `https://abd-proyecto.onrender.com`
-12. GUI: Captura de la ventana de `python3 interfaz.py`
+12. GUI: Captura de la ventana de `python3 web/interfaz.py`
 
 ---
 

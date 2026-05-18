@@ -1,4 +1,0 @@
-id:INT,nombre:STRING,precio:FLOAT,cantidad:INT
-1,Laptop,15000,5
-2,Mouse,250,10
-3,Monitor,3500,2

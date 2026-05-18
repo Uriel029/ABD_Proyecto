@@ -2,12 +2,16 @@
 db_engine
 *.o
 
-# Datos del motor (persistencia)
+# Datos del motor (no subir datos locales generados en ejecucion)
 data/*
 !data/.gitkeep
 
 # Entorno virtual
 web/venv/
+
+# Cache de Python
+__pycache__/
+*.pyc
 
 # macOS
 .DS_Store

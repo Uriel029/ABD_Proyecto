@@ -10,7 +10,7 @@ class TerminalDB:
         self.root.geometry("900x600")
         self.root.minsize(600, 400)
 
-        self.directorio = os.path.dirname(os.path.abspath(__file__))
+        self.directorio = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.ejecutable = os.path.join(self.directorio, "db_engine")
         self.db_actual = None
 

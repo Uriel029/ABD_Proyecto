@@ -81,7 +81,32 @@ int parse_command(const char *input, ParsedCmd *cmd) {
     int nt = extraer_tokens(input, tokens, 15);
     if (nt == 0) return -1;
 
-    mayusculas(tokens[0]);
+    /* Normalizar: convertir palabras en ingles a espanol */
+    for (int i = 0; i < nt; i++) mayusculas(tokens[i]);
+    for (int i = 0; i < nt; i++) {
+        if      (strcmp(tokens[i], "EXIT") == 0 || strcmp(tokens[i], "QUIT") == 0) strcpy(tokens[i], "SALIR");
+        else if (strcmp(tokens[i], "HELP") == 0) strcpy(tokens[i], "AYUDA");
+        else if (strcmp(tokens[i], "BEGIN") == 0 || strcmp(tokens[i], "START") == 0) strcpy(tokens[i], "INICIAR");
+        else if (strcmp(tokens[i], "COMMIT") == 0) strcpy(tokens[i], "CONFIRMAR");
+        else if (strcmp(tokens[i], "ROLLBACK") == 0 || strcmp(tokens[i], "ABORT") == 0) strcpy(tokens[i], "CANCELAR");
+        else if (strcmp(tokens[i], "BACKUP") == 0) strcpy(tokens[i], "RESPALDAR");
+        else if (strcmp(tokens[i], "CREATE") == 0) strcpy(tokens[i], "CREAR");
+        else if (strcmp(tokens[i], "USE") == 0) strcpy(tokens[i], "USAR");
+        else if (strcmp(tokens[i], "SHOW") == 0) strcpy(tokens[i], "MOSTRAR");
+        else if (strcmp(tokens[i], "DESCRIBE") == 0) strcpy(tokens[i], "DESCRIBIR");
+        else if (strcmp(tokens[i], "INSERT") == 0) strcpy(tokens[i], "INSERTAR");
+        else if (strcmp(tokens[i], "SELECT") == 0) strcpy(tokens[i], "SELECCIONAR");
+        else if (strcmp(tokens[i], "UPDATE") == 0) strcpy(tokens[i], "ACTUALIZAR");
+        else if (strcmp(tokens[i], "DELETE") == 0 || strcmp(tokens[i], "REMOVE") == 0 || strcmp(tokens[i], "DROP") == 0) strcpy(tokens[i], "ELIMINAR");
+        else if (strcmp(tokens[i], "DATABASE") == 0) strcpy(tokens[i], "BASE");
+        else if (strcmp(tokens[i], "DATABASES") == 0) strcpy(tokens[i], "BASES");
+        else if (strcmp(tokens[i], "TABLE") == 0) strcpy(tokens[i], "TABLA");
+        else if (strcmp(tokens[i], "TABLES") == 0) strcpy(tokens[i], "TABLAS");
+        else if (strcmp(tokens[i], "FROM") == 0) strcpy(tokens[i], "DE");
+        else if (strcmp(tokens[i], "INTO") == 0) strcpy(tokens[i], "EN");
+        else if (strcmp(tokens[i], "VALUES") == 0) strcpy(tokens[i], "VALORES");
+        else if (strcmp(tokens[i], "WHERE") == 0) strcpy(tokens[i], "DONDE");
+    }
 
     /* ===== COMANDOS DE UNA SOLA PALABRA ===== */
     if (strcmp(tokens[0], "SALIR") == 0) {
@@ -147,6 +172,7 @@ int parse_command(const char *input, ParsedCmd *cmd) {
                 if (strlen(ctype) == 0) return -1;
 
                 strncpy(cmd->columns[cmd->numColumns].name, cname, MAX_NAME - 1);
+                mayusculas(cmd->columns[cmd->numColumns].name);
                 char upctype[MAX_NAME];
                 strncpy(upctype, ctype, MAX_NAME - 1);
                 mayusculas(upctype);

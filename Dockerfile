@@ -10,7 +10,7 @@ RUN gcc -Wall -Iinclude -std=c11 src/main.c src/database.c src/parser.c -o db_en
     pip install --no-cache-dir -r web/requirements.txt
 
 # Precargar datos de ejemplo (persisten en la imagen aunque Render reinicie)
-RUN echo "CREAR BASE ejemplo\nUSAR ejemplo\nCREAR TABLA productos (id INT nombre STRING precio FLOAT)\nINSERTAR EN productos VALORES (1 Manzana 15.50)\nINSERTAR EN productos VALORES (2 Naranja 22.00)\nINSERTAR EN productos VALORES (3 Pera 18.75)\nSALIR" | ./db_engine
+RUN printf 'CREAR BASE ejemplo\nUSAR ejemplo\nCREAR TABLA productos (id INT nombre STRING precio FLOAT cantidad INT)\nINSERTAR EN productos VALORES (1 Laptop 15000.50 5)\nINSERTAR EN productos VALORES (2 Mouse 250.99 10)\nINSERTAR EN productos VALORES (3 Teclado 800 3)\nSALIR\n' | ./db_engine
 
 EXPOSE 10000
 
